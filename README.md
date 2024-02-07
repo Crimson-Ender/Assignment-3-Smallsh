@@ -1,1 +1,1 @@
-# bakerm7_program3
+# Assignment 3: smallsh
