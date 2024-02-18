@@ -1,0 +1,18 @@
+          
+turn off sigint for the parent process
+{
+   printf(":") //prompt user
+   read()
+    //coments
+   //$$ getpid()   sprintf(buffer, "%s,%d,$s")
+}
+
+          //how to pattern match for built-inc commands, use strstr()
+ fork() -> parent has to decide whether or not to wait
+ child:
+  reenable sigint
+  i/o redirection
+  execute command
+  exit to make sure the program doesn't go out of control
+
+               
