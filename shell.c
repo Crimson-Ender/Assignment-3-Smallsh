@@ -6,8 +6,8 @@
 #include <time.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
-
 #include "shell.h"
 
 int running = 1;
@@ -24,10 +24,12 @@ int main(){
         printf("%d: ", getpid());
         fflush(stdin);
         num_chars_entered = getline(&line, &buffer_size, stdin);
+        line[strlen(line)-1] = '\0';
 
         if(strlen(line)==0|| strcmp(line, "\n")==0){
             printf("empty line");
         }else{
+            line[sizeof(line)-1] = "\0";
             if(strstr(line, "$$")){
                 line = variable_expansion(line);
             }
@@ -84,6 +86,9 @@ void parse_command(char* line){
 
     char* token = strtok_r(line, " ", &save_string);
 
+    if(token == NULL){
+        return;
+    }
     strcpy(command, token);
 
     if(strcmp(command, "#")==0){
@@ -127,22 +132,30 @@ void change_directory(char* command, char* arg1){
 }
 
 char* variable_expansion(char* line){
-    char* expanded_string = malloc(strlen(line)+(sizeof(int)*10));
-    char* variable[10];
-    sprintf(variable, "%d", getpid());
+    char* expanded_string = malloc(sizeof(char)*256);
+    char* var[10];
+    sprintf(var, "%d", getpid());
     int i, j = 0;
 
     for(i = 0; i<strlen(line); i++){
         if(line[i] == '$'){
-            strcat(expanded_string,variable);
+            // sprintf(expanded_string, "%s%s", expanded_string, var);
+            // j = j + strlen(var);
+            for(int k = 0; k<strlen(var); k++){
+                expanded_string[j] = var[k];
+                j++; 
+                printf("j index: %d, k index: %d", j ,k);
+            }
             i++;
         }else{
             expanded_string[j] = line[i];
         }
+        //expanded_string[j] = line[i];
+
+        printf("Expanded string == %s\n", expanded_string);
         j++;
     }
 
-    printf("Expanded string == %s", expanded_string);
 
     free(line);
     return expanded_string;
