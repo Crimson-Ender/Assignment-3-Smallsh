@@ -1,3 +1,10 @@
+/*
+*   MAX BAKER
+*   bakerm7@oregonstate.edu
+*   February 19th, 2024
+*   shell.c
+*/
+
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,6 +18,7 @@
 #include "shell.h"
 
 int running = 1;
+int exitStatus = 0;
 
 int main(){
     startup_text();
@@ -30,9 +38,9 @@ int main(){
             printf("empty line");
         }else{
             line[sizeof(line)-1] = "\0";
-            if(strstr(line, "$$")){
-                line = variable_expansion(line);
-            }
+            // if(strstr(line, "$$")){
+            //     line = variable_expansion(line);
+            // }
             parse_command(line);
         }
 
@@ -55,13 +63,13 @@ void startup_text(){
     struct tm *current_time = localtime(&current);
 
     if(current_time->tm_hour >=18){
-        printf("Good evening! The current time is %d:%dpm on %d/%d/%d\n", 
+        printf("Good evening! The current time is %d:%0.2dpm on %d/%d/%d\n", 
         current_time->tm_hour-12, current_time->tm_min, current_time->tm_mon+1,current_time->tm_mday,current_time->tm_year+1900);
     }else if(current_time->tm_hour >= 12 && current_time->tm_hour < 18){
-        printf("Good evening! The current time is %d:%dpm on %d/%d/%d\n", 
+        printf("Good afternoon! The current time is %d:%0.2dpm on %d/%d/%d\n", 
         current_time->tm_hour-12, current_time->tm_min, current_time->tm_mon+1,current_time->tm_mday,current_time->tm_year+1900);
     }else{
-        printf("Good morning! The current time is %d:%dam on %d/%d/%d\n", 
+        printf("Good morning! The current time is %d:%0.2dam on %d/%d/%d\n", 
         current_time->tm_hour, current_time->tm_min, current_time->tm_mon+1,current_time->tm_mday,current_time->tm_year+1900);
     }
 
@@ -104,17 +112,18 @@ void parse_command(char* line){
         char* arg2 = strtok_r(NULL, " ", &save_string);
 
         //printf("DEBUG: command: %s, argument 1: %s, argument 2: %s\n", command, arg1, arg2);
-        process_command(command, arg1, arg2);
+        process_command(command, arg1, arg2, line);
     }
 
 }
 
-void process_command(char* command, char* arg1, char* arg2){
+void process_command(char* command, char* arg1, char* arg2, char* line){
 
-    if(strcmp(command, "cd")==0 || strcmp(command, "cd\n")==0){
+    if(strcmp(command, "cd")==0){
         printf("this is what would change directory");
+        change_directory(command, arg1);
     }else if(strcmp(command, "status")==0){
-        printf("this would print status");
+        return_status(command);
     }else if(strcmp(command, "exit")==0){
         //this will end the program
         running = 0;
@@ -127,36 +136,35 @@ void process_command(char* command, char* arg1, char* arg2){
 
 }
 
-void change_directory(char* command, char* arg1){
+void change_directory(char* command, char* path){
+    char* current_dir[100];
+    if(path == NULL){
+        path = getenv("HOME");
+    }
+    int ret = chdir(path);
+    printf("success status: %d\n",ret);
+    printf("current directory: %s\n", getcwd(current_dir, 100));
+    return;
+}
 
+void return_status(char* command){
+    printf("Exit status: %d\n", exitStatus);
+    return;
 }
 
 char* variable_expansion(char* line){
-    char* expanded_string = malloc(sizeof(char)*256);
-    char* var[10];
-    sprintf(var, "%d", getpid());
-    int i, j = 0;
+    char* extended_string = malloc(sizeof(char)*512);
+    char* delimPlace = strstr(line, "$$");
 
-    for(i = 0; i<strlen(line); i++){
-        if(line[i] == '$'){
-            // sprintf(expanded_string, "%s%s", expanded_string, var);
-            // j = j + strlen(var);
-            for(int k = 0; k<strlen(var); k++){
-                expanded_string[j] = var[k];
-                j++; 
-                printf("j index: %d, k index: %d", j ,k);
-            }
-            i++;
-        }else{
-            expanded_string[j] = line[i];
-        }
-        //expanded_string[j] = line[i];
+    char* pretext[255];
+    char* posttext[255];
+    //memset(pretext);
+    strncpy(pretext, line, delimPlace- line);
+    //memset(posttext);
+    strncpy(posttext, line, line-delimPlace);
 
-        printf("Expanded string == %s\n", expanded_string);
-        j++;
-    }
-
+    sprintf(extended_string, "%s%d%s", pretext, getpid(), posttext);
 
     free(line);
-    return expanded_string;
+    return extended_string;
 }
