@@ -11,15 +11,22 @@ FEATURES:
 This program has most of the functionality of a simple UNIX shell. It contains three custom built-in commands, and the ability to run a number of other bash commands.
 
 BUILT-IN COMMANDS
+
 cd - Changes the directory; the user can either specify a file path to navigate to, or pass in no argument and be returned to the home directory as specified in the HOME enviroment variable. This command only takes one argument and will ignore the rest of the arguments passed into it.
+
 status - prints out the exit status of the most recently run command. This command takes no arguments, and will simply ignore all arguments passed.
+
 exit - ends the program and clears dynamic memory allocated. This command also takes no arguments, and will simply ignore all arguments passed as well.
+
 "#" - the hashtag symbol represents a comment. If the # symbol is used as the command for a line, the program will just ignore the line and prompt the user for a new line.
 
 EXAMPLES OF OTHER COMMANDS THAT AREN'T BUILT IN
 ls - lists the files present at a specific path; with no arguments it prints the contents of the current directory
+
 echo - prints back the string you put in; the smallsh program itself with expand the variable $$ into the process id of the smallsh program.
+
 ping - pings the server you are running the shell on
+
 mkdir - makes a directory
 
 in short, you can run most linux commands through this shell
