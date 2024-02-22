@@ -16,33 +16,35 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+
 #include "shell.h"
 
 int running = 1;
 int exitStatus = 0;
 
 int main(){
-    startup_text();
+    /*Main function that handles the shell*/
+    startup_text(); //print the startup text
 
+    //variables needed to get the user's input line
     int num_chars_entered = -5;
     int current_char = -5;
     size_t buffer_size = 0;
     char* line = NULL;
     
     do{
-        printf("%d: ", getpid());
-        fflush(stdin);
-        num_chars_entered = getline(&line, &buffer_size, stdin);
-        line[strlen(line)-1] = '\0';
+        printf("%d: ", getpid());   //prompts the user for an input line
+        fflush(stdin);  //flushes standard in
+        num_chars_entered = getline(&line, &buffer_size, stdin);    //gets the input line from the user
+        line[strlen(line)-1] = '\0';    //change the last character of the line to a null character to prevent bugs with the newline character
 
         if(strlen(line)==0|| strcmp(line, "\n")==0){
             printf("empty line");
         }else{
-            line[sizeof(line)-1] = "\0";
             // if(strstr(line, "$$")){
             //     line = variable_expansion(line);
             // }
-            parse_command(line);
+            parse_command(line); 
         }
 
         free(line);
@@ -102,9 +104,13 @@ int check_blank(char* line){
 void parse_command(char* line){
     //runs through the line the user entered and parses out the command and the first two arguments entered
     char* save_string; //to prvent the command the user passed from getting ruined in the token process
-    char* command[256]; //initializes an array of 256 characters to 
+    char* command[256]; //initializes an array of 256 characters to
+    char* line_copy[2048];
+    strcpy(line_copy, line);
 
-    char* token = strtok_r(line, " ", &save_string);
+    printf("line entered #1: %s\n", line);
+
+    char* token = strtok_r(line, " ", &save_string); //parses out the command from the user input
 
     if(token == NULL){
         return;
@@ -124,7 +130,9 @@ void parse_command(char* line){
         char* arg2 = strtok_r(NULL, " ", &save_string);
 
         //printf("DEBUG: command: %s, argument 1: %s, argument 2: %s\n", command, arg1, arg2);
-        process_command(command, arg1, arg2, line);
+        printf("line entered #2: %s\n", line);
+        printf("line copy: %s\n", line_copy);
+        process_command(command, arg1, arg2, line_copy);
     }
 
 }
@@ -188,18 +196,56 @@ void not_built_in(char* command, char* line){
         printf("this would run as a background process once that functionality is implemented\n");
     }
 
-    char* args[] = {command, NULL};
+    char* args[512];
+    char* save_string = line;
+    char* token;
+
+    int i = 0;
+
+    int in_index = 0;
+    int out_index = 0;
+
+    printf("line entered #3: %s\n", line);
+
+    while(token = strtok_r(save_string, " ", &save_string)){
+        args[i] = token;
+        printf("%s\n", args[i]);
+        if(strcmp(token, "<")==0){
+            in_index = i+1;
+            //printf("in_index = %d", in_index);
+        }
+        if(strcmp(token, ">")==0){
+            out_index = i+1;
+            //printf("out_index = %d", out_index);
+        }
+        i++;
+    }
+
+    args[i] = NULL;
+
+    printf("in_index %d\nout_index %d\n", in_index,out_index);
+
+    //DEBUG
+    for(int j = 0; j==i; j++){
+        printf("%s\n", args[j]);
+    }
+
+    if(strcmp(args[i-1],"&") == 0){
+        printf("This would run as a background process\n");
+    }
     
-    pid_t spawnpid = fork();
+    pid_t spawnpid = fork();    //create a new process
     int background_process = 0;
     switch(spawnpid){
         case -1:
+            //handles when a fork fails
             perror("Fork failed!\n");
             exit(1);
             break;
         case 0:
+            //fork successful
             printf("executing file %s\n", args[0]);
-            execvp(command, args);
+            execvp(command, args);  //execute command
             perror("execvp() failed!");
             exit(2);
             break;
@@ -211,35 +257,4 @@ void not_built_in(char* command, char* line){
     }
     return;
 
-}
-
-char* parse_arguments(char* line, char* exec_path){
-    char* save_string;
-    char* token = strtok_r(line, " ", &save_string);
-    char* arg[512];
-    
-    arg[0] = exec_path;
-    int i = 1;
-    while(token != NULL){
-
-        token = strtok_r(NULL, " ", &save_string);        
-        if(token!=NULL){
-            arg[i] = token;
-        }
-        i++;
-    }
-    arg[i] = NULL;
-
-    printf("arg[0] == %s\n",arg[0]);
-    // for(int j = 0; j<i; j++){
-    //     if(arg[j] == NULL){
-    //         printf("NULL\n");
-    //         break;
-    //     }else{
-    //         printf("%s\n", arg[j]);
-    //     }
-    // }
-
-    return arg;
-    
 }
