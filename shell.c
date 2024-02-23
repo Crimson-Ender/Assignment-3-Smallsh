@@ -33,6 +33,8 @@ int main(){
     char* line = NULL;
     
     do{
+        signal(SIGINT, SIG_IGN);
+
         printf("%d: ", getpid());   //prompts the user for an input line
         fflush(stdin);  //flushes standard in
         num_chars_entered = getline(&line, &buffer_size, stdin);    //gets the input line from the user
@@ -108,7 +110,7 @@ void parse_command(char* line){
     char* line_copy[2048];
     strcpy(line_copy, line);
 
-    printf("line entered #1: %s\n", line);
+    //printf("line entered #1: %s\n", line);
 
     char* token = strtok_r(line, " ", &save_string); //parses out the command from the user input
 
@@ -130,8 +132,8 @@ void parse_command(char* line){
         char* arg2 = strtok_r(NULL, " ", &save_string);
 
         //printf("DEBUG: command: %s, argument 1: %s, argument 2: %s\n", command, arg1, arg2);
-        printf("line entered #2: %s\n", line);
-        printf("line copy: %s\n", line_copy);
+        //printf("line entered #2: %s\n", line);
+        //printf("line copy: %s\n", line_copy);
         process_command(command, arg1, arg2, line_copy);
     }
 
@@ -197,38 +199,48 @@ void not_built_in(char* command, char* line){
     }
 
     char* args[512];
+    char* parsed_line[512];
     char* save_string = line;
     char* token;
 
     int i = 0;
-
+    int h = 0;
+    int last_arg = 0;
     int in_index = 0;
     int out_index = 0;
 
-    printf("line entered #3: %s\n", line);
+    //printf("line entered #3: %s\n", line);
 
     while(token = strtok_r(save_string, " ", &save_string)){
-        args[i] = token;
-        printf("%s\n", args[i]);
+        parsed_line[h] = token;
+        //printf("%s\n", args[i]);
         if(strcmp(token, "<")==0){
-            in_index = i+1;
-            //printf("in_index = %d", in_index);
+            in_index = h+1;
+            if(last_arg == 0){
+                last_arg = 1;
+            }
         }
         if(strcmp(token, ">")==0){
-            out_index = i+1;
-            //printf("out_index = %d", out_index);
+            out_index = h+1;
+            if(last_arg == 0){
+                last_arg = 1;
+            }
         }
-        i++;
+        if(last_arg == 0){
+            args[i] = token;
+            i++;
+        }
+        h++;
     }
 
     args[i] = NULL;
 
-    printf("in_index %d\nout_index %d\n", in_index,out_index);
+    //printf("in_index %d\nout_index %d\n", in_index,out_index);
 
     //DEBUG
-    for(int j = 0; j==i; j++){
-        printf("%s\n", args[j]);
-    }
+    // for(int j = 0; j==i; j++){
+    //     printf("%s\n", args[j]);
+    // }
 
     if(strcmp(args[i-1],"&") == 0){
         printf("This would run as a background process\n");
@@ -236,6 +248,8 @@ void not_built_in(char* command, char* line){
     
     pid_t spawnpid = fork();    //create a new process
     int background_process = 0;
+
+
     switch(spawnpid){
         case -1:
             //handles when a fork fails
@@ -244,6 +258,26 @@ void not_built_in(char* command, char* line){
             break;
         case 0:
             //fork successful
+            if(out_index != 0){
+                int out_file_desc = open(parsed_line[out_index], O_RDWR | O_APPEND);
+                printf("output file: %s\n", parsed_line[out_index]);
+                
+                if(parsed_line[out_index] == NULL){
+                    perror("Invalid output file!\n");
+                }else{
+                    dup2(out_file_desc, 1);
+                }
+            }
+            if(in_index !=0){
+                int in_file_desc = open(parsed_line[in_index], O_RDWR | O_APPEND);
+                printf("input file: %s\n", parsed_line[in_index]);
+
+                if(parsed_line[in_index] == NULL){
+                    perror("Invalid input file!\n");
+                }else{
+                    dup2(in_file_desc, 0);
+                }
+            }
             printf("executing file %s\n", args[0]);
             execvp(command, args);  //execute command
             perror("execvp() failed!");
