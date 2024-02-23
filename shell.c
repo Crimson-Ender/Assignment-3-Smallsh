@@ -21,6 +21,7 @@
 
 int running = 1;
 int exitStatus = 0;
+int fg_only = 0;
 
 int main(){
     /*Main function that handles the shell*/
@@ -34,6 +35,7 @@ int main(){
     
     do{
         signal(SIGINT, SIG_IGN);
+        signal(SIGTSTP, fg_bg_signal);
 
         printf("%d: ", getpid());   //prompts the user for an input line
         fflush(stdin);  //flushes standard in
@@ -43,9 +45,9 @@ int main(){
         if(strlen(line)==0|| strcmp(line, "\n")==0){
             printf("empty line");
         }else{
-            // if(strstr(line, "$$")){
-            //     line = variable_expansion(line);
-            // }
+            if(strstr(line, "$$")){
+                line = variable_expansion(line);
+            }
             parse_command(line); 
         }
 
@@ -176,7 +178,7 @@ void return_status(char* command){
 }
 
 char* variable_expansion(char* line){
-    char* extended_string = malloc(sizeof(char)*512);
+    char* extended_string = malloc(sizeof(char)*2048);
     char* delimPlace = strstr(line, "$$");
 
     char* pretext[255];
@@ -184,7 +186,7 @@ char* variable_expansion(char* line){
     //memset(pretext);
     strncpy(pretext, line, delimPlace- line);
     //memset(posttext);
-    strncpy(posttext, line, line-delimPlace);
+    strncpy(posttext, line, delimPlace);
 
     sprintf(extended_string, "%s%d%s", pretext, getpid(), posttext);
 
@@ -194,10 +196,6 @@ char* variable_expansion(char* line){
 
 void not_built_in(char* command, char* line){
         
-    if(line[strlen(line)-1] == '&'){
-        printf("this would run as a background process once that functionality is implemented\n");
-    }
-
     char* args[512];
     char* parsed_line[512];
     char* save_string = line;
@@ -226,7 +224,7 @@ void not_built_in(char* command, char* line){
                 last_arg = 1;
             }
         }
-        if(last_arg == 0){
+        if(last_arg == 0 && strcmp(token, "&")!=0){
             args[i] = token;
             i++;
         }
@@ -242,12 +240,14 @@ void not_built_in(char* command, char* line){
     //     printf("%s\n", args[j]);
     // }
 
-    if(strcmp(args[i-1],"&") == 0){
-        printf("This would run as a background process\n");
-    }
     
     pid_t spawnpid = fork();    //create a new process
     int background_process = 0;
+
+    if(strcmp(parsed_line[h-1],"&") == 0 && fg_only == 0){
+        printf("This would run as a background process\n");
+        //background_process = 1;
+    }
 
 
     switch(spawnpid){
@@ -257,6 +257,7 @@ void not_built_in(char* command, char* line){
             exit(1);
             break;
         case 0:
+            signal(SIGTSTP, SIG_IGN);
             //fork successful
             if(out_index != 0){
                 int out_file_desc = open(parsed_line[out_index], O_RDWR | O_APPEND);
@@ -278,6 +279,12 @@ void not_built_in(char* command, char* line){
                     dup2(in_file_desc, 0);
                 }
             }
+            if(in_index == 0 && out_index == 0 && background_process == 1){
+                
+                int dev_null = open("dev/null", O_WRONLY);
+                dup2(dev_null, 0);
+                dup2(dev_null, 1);
+            }
             printf("executing file %s\n", args[0]);
             execvp(command, args);  //execute command
             perror("execvp() failed!");
@@ -285,10 +292,26 @@ void not_built_in(char* command, char* line){
             break;
         default:
             printf("I am the parent of the child %d\n", spawnpid);
-            spawnpid = waitpid(spawnpid,  &exitStatus, 0);
-            printf("the parent is done waiting. The pid of the child that terminated is %d\n",spawnpid);
+            if(background_process == 0){
+                spawnpid = waitpid(spawnpid,  &exitStatus, 0);
+                printf("the parent is done waiting. The pid of the child that terminated is %d\n",spawnpid);
+            }else{
+
+            }
             break;
     }
     return;
+
+}
+
+void fg_bg_signal(int s){
+    if(fg_only == 0){
+        printf("\nEntering foreground only mode!\n");
+        fg_only = 1;
+    }else{
+        printf("\nRe-enabling background processes!\n");
+        fg_only = 0;
+    }
+    fflush(stdin);
 
 }
