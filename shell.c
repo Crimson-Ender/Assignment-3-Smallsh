@@ -40,18 +40,19 @@ int main(){
         signal(SIGINT, SIG_IGN);
         signal(SIGTSTP, fg_bg_signal);
 
-        printf("%d: ", getpid());   //prompts the user for an input line
+        printf(": ", getpid());   //prompts the user for an input line
         fflush(stdin);  //flushes standard in
         num_chars_entered = getline(&line, &buffer_size, stdin);    //gets the input line from the user
         line[strlen(line)-1] = '\0';    //change the last character of the line to a null character to prevent bugs with the newline character
 
         fflush(stdout);
         if(strlen(line)==0|| strcmp(line, "\n")==0){
-            printf("empty line");
+            //printf("empty line");
         }else{
             if(strstr(line, "$$")){
                 line = variable_expansion(line);
             }
+            fflush(stdin);
             parse_command(line); 
         }
 
@@ -128,7 +129,7 @@ void parse_command(char* line){
 
     if(strcmp(command, "#")==0){
         //this is a comment, we do not process anything from here.
-        printf("comment");
+        //printf("comment");
         return;
     }else if(strlen(command)==0){
         //printf("empty line");
@@ -148,19 +149,15 @@ void parse_command(char* line){
 
 void process_command(char* command, char* arg1, char* arg2, char* line){
     //uses branching logic to determine what the next course of action is
-    if(strcmp(command, "cd")==0){
-        //change directory
-        //printf("this is what would change directory");
-        change_directory(command, arg1);
+    if(command[0]=='#'){
+        //this will be a comment and the program will ignore it
+        return;
     }else if(strcmp(command, "status")==0){
         //return the exit status of the last executed program
         return_status(command);
     }else if(strcmp(command, "exit")==0){
         //this will end the program
         running = 0;
-        return;
-    }else if(strcmp(command, "#")==0){
-        //this will be a comment and the program will ignore it
         return;
     }else{
         //this will run a command that is not build in
@@ -183,6 +180,9 @@ void change_directory(char* command, char* path){
 
 void return_status(char* command){
     //simply prints out the exit status of the last command that was run
+    if(exitStatus > 0){
+        exitStatus = 1;
+    }
     printf("Exit status: %d\n", exitStatus);
     return;
 }
@@ -252,6 +252,11 @@ void not_built_in(char* command, char* line){
 
     args[i] = NULL; //sets the last argument of the args array to a NULL pointer, or else the programs will not run correctly
     
+    if(strcmp(args[0],"cd")==0){
+        change_directory(args[0],args[1]);
+        return;
+    }
+
     pid_t spawnpid = fork();    //create a new process
     int background_process = 0;
 
@@ -327,7 +332,7 @@ void not_built_in(char* command, char* line){
                 fflush(stdout);
             }else{
                 //if the child process is not a foreground process, the program will not wait and continue on
-                printf("Process %d running in the background\n", spawnpid);
+                printf("ID of background process: %d\n", spawnpid);
                 fflush(stdout);
                 child_processes[process_no] = spawnpid;
                 process_no++;
