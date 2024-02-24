@@ -34,3 +34,6 @@ in short, you can run most linux commands through this shell
 
 HOW TO COMPILE:
 This program is compiled with a Makefile. All you need to do to complile it is use the "make" command in the terminal once you have navigated to a directory containing the program's files. The makefile compiles the program using GCC to the C99 standard. The program will be compiled into an executable called "smallsh". You will be able to run it in the terminal with the command "smallsh".
+
+KNOWN ISSUES:
+I couldn't get the signal that is thrown when a background child process terminates to work properly, so it is currently unused. Otherwise, background child processes are completely functional.

@@ -20,4 +20,6 @@ void not_built_in(char* command, char* line);
 
 
 void fg_bg_signal(int s);
+void int_signal(int s);
+void child_signal(int s);
 #endif
